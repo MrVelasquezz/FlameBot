@@ -1,8 +1,12 @@
 const ds = require('discord.js')
 
+const find = (m) => {
+    return queue.find(item => item.serverId === m.guildId)
+}
+
 const helpCommands = {
     name: 'Commands:',
-    value: '```-help - for help \n\n-play <url|song name> - to play music from YouTube \n\n-pause - to pause music \n\n-unpause - to continue playing \n\n-skip <number|all> \n\n-queue - to see, what is in queue \n\n-playing - to see, which track is playing now```'
+    value: '```-help - for help \n\n-play <url|song name> - to play music from YouTube \n\n-pause - to pause music \n\n-unpause - to continue playing \n\n-skip <number|all> \n\n-queue - to see, what is in queue \n\n-playing - to see, which track is playing now \n\n-again <times> - to repeat current track```'
 }
 
 const helpMsg = new ds.MessageEmbed()
@@ -55,7 +59,7 @@ const skipMsgE = new ds.MessageEmbed()
     })
 
 const queueMsg = (m) => {
-    const q = queue.find(item => item.serverId === m.guildId)
+    const q = find()
     q.queue.splice(0, 1)
     const text = () => {
         let text = '',
@@ -86,15 +90,13 @@ const queueMsgE = new ds.MessageEmbed()
     })
 
 const playingMsg = (m) => {
-    const q = queue.find(item => item.serverId === m.guildId)
-    console.log(q.queue)
 
     return new ds.MessageEmbed()
         .setColor('GREEN')
         .addField('Now is playing:',
-            `${q.queue[0].name} ${q.queue[0].duration}`)
+            `${find(m).queue[0].name} ${find(m).queue[0].duration}`)
         .setTimestamp(Date.now())
-        .setThumbnail(q.queue[0].thumbnail)
+        .setThumbnail(find(m).queue[0].thumbnail)
         .setFooter({
             text: 'FlameBot'
         })
@@ -103,6 +105,58 @@ const playingMsg = (m) => {
 const playingMsgE = new ds.MessageEmbed()
     .setColor('RED')
     .setTitle('Nothing is playing now.')
+    .setTimestamp(Date.now())
+    .setFooter({
+        text: 'FlameBot'
+    })
+
+const videoError = new ds.MessageEmbed()
+    .setColor('RED')
+    .setTitle('This video has limitations. Find a video without limitations and try again.')
+    .setTimestamp(Date.now())
+    .setFooter({
+        text: 'FlameBot'
+    })
+
+const ps = new ds.MessageEmbed()
+    .setColor('RED')
+    .setTitle('Player was stoped.')
+    .setTimestamp(Date.now())
+    .setFooter({
+        text: 'FlameBot'
+    })
+
+const pp = (m) => {
+    return new ds.MessageEmbed()
+    .setColor('BLUE')
+    .setDescription(`Track **${find(m).queue[0].name}** was paused.`)
+    .setTimestamp(Date.now())
+    .setFooter({
+        text: 'FlameBot'
+    })
+}
+
+const up = (m) => {
+    return new ds.MessageEmbed()
+    .setColor('BLUE')
+    .setDescription(`Track **${find(m).queue[0].name}** was unpaused.`)
+    .setTimestamp(Date.now())
+    .setFooter({
+        text: 'FlameBot'
+    })
+}
+
+const vce = new ds.MessageEmbed()
+    .setColor('AQUA')
+    .setDescription(`You need to enter a voice channel first.`)
+    .setTimestamp(Date.now())
+    .setFooter({
+        text: 'FlameBot'
+    })
+
+const ivce = new ds.MessageEmbed()
+    .setColor('AQUA')
+    .setDescription(`You need to enter a voice channel first, to interract with buttons.`)
     .setTimestamp(Date.now())
     .setFooter({
         text: 'FlameBot'
@@ -117,5 +171,11 @@ module.exports = {
     queueMsg,
     queueMsgE,
     playingMsg,
-    playingMsgE
+    playingMsgE,
+    videoError,
+    ps,
+    pp,
+    up,
+    vce,
+    ivce
 }

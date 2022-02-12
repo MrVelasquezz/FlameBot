@@ -9,7 +9,7 @@ const client = new ds.Client({intents: [ds.Intents.FLAGS.GUILDS, ds.Intents.FLAG
 ds.Intents.FLAGS.GUILD_VOICE_STATES
 ]})
 
-const { helpMsg, hiMsg, skipMsg, skipMsgE, queueMsg, queueMsgE, playingMsg, playingMsgE } = require('./src/messages/messages')
+const { helpMsg, hiMsg, skipMsg, skipMsgE, queueMsg, queueMsgE, playingMsg, playingMsgE, videoError, ps, pp, up, vce, ivce } = require('./src/messages/messages')
 
 const m_key = '-'
 global.queue = []
@@ -42,7 +42,17 @@ class Queue{
     if(this.d, this.t){
       if(this.d, this.t){
         const id = this.findPos()
-        const vid = await playDl.video_info(this.t)
+        let vid
+        try{
+          vid = await playDl.video_info(this.t)
+        }
+        catch(e){
+          this.d.channel.send({
+            embeds: [videoError]
+          })
+          console.log(e)
+          return
+        }
         if(id !== -1){
           queue[id].queue.push({
             track: this.t,
@@ -147,11 +157,17 @@ async function audioDriver(item, mess){
 
 client.once('ready', () => {
   console.log('Bot started')
+  client.user.setPresence({
+    status: 'online',
+    activities: [{
+      name: '-help | FlameBot',
+      type: 'PLAYING'
+    }]
+  })
 })
 
 client.on('interactionCreate', async m => {
   if(m.isButton()){
-    if(m.customId === 'HelloBtn') m.reply(`Hello, ${m.user}. Nice to meet you`) //this is how to mention user
     try{
       if(m.member.voice.channel){
         if(playDl.yt_validate(m.customId) === 'video' || playDl.yt_validate(m.customId) === 'playlist'){
@@ -161,11 +177,13 @@ client.on('interactionCreate', async m => {
         }
       }
       else{
-        m.deferReply() //откладывает ответ и выводит сообщение FlameBot is thinking...
+        //m.deferReply() //откладывает ответ и выводит сообщение FlameBot is thinking...
         setTimeout(() => {
-          m.editReply('You need to be in a voice channel, to interract with buttons')
+          m.update({
+            embeds: [ivce],
+            components: []
+          })
         }, 1000)  // изменяет ответ, что выше
-        //m.reply('You need to be in a voice channel, to interract with buttons')
       }
     }
     catch(e){
@@ -198,7 +216,6 @@ client.on('messageCreate', async m => {
               c.create()
             }
             else if(playDl.yt_validate(content) === 'search'){
-              console.log('Search opt active')
               const res = await playDl.search(content, {
                 limit: 5
               })
@@ -249,20 +266,22 @@ client.on('messageCreate', async m => {
           }
         }
       else{
-        m.reply('You need first to enter a voice channel')
+        m.reply({
+          embeds: [vce]
+        })
       }          
     }
     else if(command() === 'stop'){
       dsv.getVoiceConnection(m.guildId).disconnect()
-      m.channel.send('Player was stoped.')
+      m.channel.send({embeds:[ps]})
     }
     else if(command() === 'pause'){
-      m.channel.send('Music was paused. Type **-unpause** to unpause.')
       emitter.emit('pause')
+      m.channel.send({embeds: [pp(m)]})
     }
     else if(command() === 'unpause'){
-      m.channel.send('Music was unpaused.')
       emitter.emit('unpause')
+      m.channel.send({embeds: [up(m)]})
     }
     else if(command() === 'playing'){
       const now = queue.find(item => item.serverId === m.guildId)
@@ -322,9 +341,14 @@ client.on('messageCreate', async m => {
 })
 
 client.on('voiceStateUpdate', (oldState, newState) => {
+  //console.log(oldState.channelId, oldState.channel, newState.channelId, newState.channel)
   if(oldState.channel !== null){
     if(oldState.channel.members.size === 1 && oldState.channel.members.has('939294433852145725')){
       dsv.getVoiceConnection(oldState.guild.id).disconnect()
+      const d = new Queue(oldState.channel)
+      d.destroy()
+    }
+    if(!oldState.channel.members.has('939294433852145725')){
       const d = new Queue(oldState.channel)
       d.destroy()
     }
