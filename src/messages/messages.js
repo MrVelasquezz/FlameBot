@@ -6,7 +6,7 @@ const find = (m) => {
 
 const helpCommands = {
     name: 'Commands:',
-    value: '```-help - for help \n\n-play <url|song name> - to play music from YouTube \n\n-pause - to pause music \n\n-unpause - to continue playing \n\n-skip <number|all> \n\n-queue - to see, what is in queue \n\n-playing - to see, which track is playing now \n\n-again <times> - to repeat current track```'
+    value: '```-help - for help \n\n-play <url|song name> - to play music from YouTube \n\n-pause - to pause music \n\n-unpause - to continue playing \n\n-skip - to skip current track \n\n-queue - to see, what is in queue \n\n-playing - to see, which track is playing now \n\n-again <times> - to repeat current track```'
 }
 
 const helpMsg = new ds.MessageEmbed()
