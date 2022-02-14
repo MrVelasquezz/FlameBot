@@ -49,7 +49,6 @@ class Queue {
         for (let a = 0; a <= this.i; a++) {
           queue[id].queue.unshift(queue[id].queue[0])
         }
-        console.log(queue[id].queue)
         this.d.channel.send('Track ' + queue[id].queue[0].name + ' will be repeated ' + i + ' times')
       }
     }
@@ -121,51 +120,145 @@ function next_track(item, mess) {
 
 async function audioDriver(item, mess) {
   const que = queue.find(q => q.serverId === item.guildId)
-  if (que) {
-    const url = que.queue[0].track
-    const vid_info = que.queue[0].name
-    const stream = await playDl.stream(url)
-    const player = dsv.createAudioPlayer()
-    const audio_res = dsv.createAudioResource(stream.stream, {
-      inputType: stream.type
-    })
-    const connection = dsv.joinVoiceChannel({
-      channelId: item.id, //returns channel id, where i am
-      guildId: item.guildId, // returns the guild id, where the channel is
-      adapterCreator: item.guild.voiceAdapterCreator,
-      selfMute: false,
-      selfDeaf: false
-    })
-
-    player.play(audio_res)
-    connection.subscribe(player)
-
-    player.on('idle', () => {
-      player.stop()
-      next_track(item, mess)
-    })
-    player.on('playing', d => {
-      if (d.status === 'buffering') {
-        mess.channel.send({
-          embeds: [playingMsg(mess)]
-        })
-        console.log('The player is playing now. ')
-      }
-    })
-    player.on('error', e => {
-      player.stop()
-      console.error('Error occured! ' + e)
-    })
-    emitter.on('pause', () => {
-      player.pause()
-    })
-    emitter.on('unpause', () => {
-      player.unpause()
-    })
-    emitter.on('skip', () => {
-      player.stop()
-    })
+  if(item.permissionsFor(item.guild.me).has('CONNECT') && item.permissionsFor(item.guild.me).has('SPEAK')){
+    if (que) {
+      const url = que.queue[0].track
+      const vid_info = que.queue[0].name
+      const stream = await playDl.stream(url)
+      const player = dsv.createAudioPlayer()
+      const audio_res = dsv.createAudioResource(stream.stream, {
+        inputType: stream.type
+      })
+      const connection = dsv.joinVoiceChannel({
+        channelId: item.id, //returns channel id, where i am
+        guildId: item.guildId, // returns the guild id, where the channel is
+        adapterCreator: item.guild.voiceAdapterCreator,
+        selfMute: false,
+        selfDeaf: false
+      })
+  
+      player.play(audio_res)
+      connection.subscribe(player)
+  
+      player.on('idle', () => {
+        player.stop()
+        next_track(item, mess)
+      })
+      player.on('playing', d => {
+        if (d.status === 'buffering') {
+          mess.channel.send({
+            embeds: [playingMsg(mess)]
+          })
+          console.log('The player is playing now. ')
+        }
+      })
+      player.on('error', e => {
+        player.stop()
+        console.error('Error occured! ' + e)
+      })
+      emitter.on('pause', () => {
+        player.pause()
+      })
+      emitter.on('unpause', () => {
+        player.unpause()
+      })
+      emitter.on('skip', () => {
+        player.stop()
+      })
+    }
   }
+}
+
+async function finderMessage(m, res, i, c) {
+  i = parseInt(i)
+  if (res && m && i !== false && !isNaN(i)) {
+    const trackArr = function () {
+      let arr = []
+      let btnArr = []
+      let s = 0
+      for (let a = i; a <= i + 4; a++) {
+        s++
+        if (res[a]) {
+          arr.push({
+            name: '-',
+            value: '```' + s + '. ' + res[a].title + ' ' + res[a].durationRaw + '```',
+            inline: false
+          })
+          btnArr.push(new ds.MessageButton()
+            .setCustomId(res[a].url)
+            .setEmoji('🎶')
+            .setLabel(s.toString())
+            .setStyle('SUCCESS'))
+        }
+      }
+      return [arr, btnArr]
+    }
+
+    const prewBtnO = {
+      customId: JSON.stringify({
+        pref: '-',
+        data: c,
+        index: i - 5
+      }),
+      emoji: '⬅️',
+      style: 'PRIMARY'
+    }
+
+    const nextBtnO = {
+      customId: JSON.stringify({
+        pref: '+',
+        data: c,
+        index: i + 5
+      }),
+      emoji: '➡️',
+      style: 'PRIMARY'
+    }
+
+    if (i <= 0) {
+      prewBtnO.disabled = true
+      prewBtnO.style = 'SECONDARY'
+    } else if (i >= res.length - 5) {
+      nextBtnO.disabled = true
+      nextBtnO.style = 'SECONDARY'
+    }
+
+    const prewBtn = new ds.MessageButton(prewBtnO)
+    const nextBtn = new ds.MessageButton(nextBtnO)
+
+    const emptyBtn = (a) => {
+      const d = new ds.MessageButton()
+        .setLabel(' ')
+        .setCustomId(a)
+        .setStyle('SECONDARY')
+        .setDisabled(true)
+      return d
+    }
+
+    const selectTrack = new ds.MessageEmbed()
+      .setTitle('**Select a track**')
+      .setDescription('Select a track in the list below. You just need to click the button with the number of a track.')
+      .setColor('RED')
+      .setFields(trackArr()[0])
+
+    const ytButtons = new ds.MessageActionRow()
+      .addComponents(trackArr()[1]),
+      controllButtons = new ds.MessageActionRow()
+      .addComponents([prewBtn, emptyBtn('empty1'), emptyBtn('empty2'), emptyBtn('empty3'), nextBtn])
+
+    return {
+      embeds: [selectTrack],
+      components: [ytButtons, controllButtons]
+    }
+  } else {
+    return 'Error'
+  }
+}
+
+async function responcer(data) {
+  const res = await playDl.search(data, {
+    limit: 20
+  })
+  return res
 }
 
 client.once('ready', () => {
@@ -187,6 +280,13 @@ client.on('interactionCreate', async m => {
           m.message.delete()
           const c = new Queue(m, m.customId)
           c.create()
+        } else {
+          try {
+            const data = JSON.parse(m.customId)
+            m.update(await finderMessage(m, await responcer(data.data), data.index, data.data))
+          } catch (e) {
+            console.log(e)
+          }
         }
       } else {
         //m.deferReply() //откладывает ответ и выводит сообщение FlameBot is thinking...
@@ -206,7 +306,7 @@ client.on('interactionCreate', async m => {
 
 client.on('messageCreate', async m => {
   let mess = m.content.trim()
-  if (mess.length > 1 && mess.startsWith(m_key)) {
+  if (mess.length > 1 && mess.startsWith(m_key) && m.channel.permissionsFor(m.guild.me).has('SEND_MESSAGES')) {
     const s = mess.indexOf(' ')
     mess = mess.slice(1, mess.length)
     const command = function () {
@@ -224,52 +324,8 @@ client.on('messageCreate', async m => {
             m.delete()
             const c = new Queue(m, content)
             c.create()
-          } else if (playDl.sp_validate(content) === 'track') {
-
           } else if (playDl.yt_validate(content) === 'search') {
-            const res = await playDl.search(content, {
-              limit: 5
-            })
-            const trackArr = function () {
-              let arr = [],
-                i = 0
-              res.forEach(item => {
-                i++
-                arr.push({
-                  name: '-',
-                  value: '```' + i + '. ' + item.title + ' ' + item.durationRaw + '```',
-                  inline: false
-                })
-              })
-              return arr
-            }
-            const ytTrackButtonsArr = function () {
-              let arr = [],
-                i = 0
-              res.forEach(item => {
-                i++
-                arr.push(
-                  new ds.MessageButton()
-                  .setCustomId(item.url)
-                  .setEmoji('🎶')
-                  .setLabel(i.toString())
-                  .setStyle('DANGER')
-                )
-              })
-              return arr
-            }
-            const selectTrack = new ds.MessageEmbed()
-              .setTitle('**Select a track**')
-              .setDescription('Select a track in the list below. You just need to click the button with the number of a track.')
-              .setColor('RED')
-              .setFields(trackArr())
-
-            const ytButtons = new ds.MessageActionRow()
-              .addComponents(ytTrackButtonsArr())
-            m.reply({
-              embeds: [selectTrack],
-              components: [ytButtons]
-            })
+            m.reply(await finderMessage(m, await responcer(content), 0, content))
           }
         } catch (e) {
           console.error(e)
@@ -344,6 +400,8 @@ client.on('messageCreate', async m => {
         }
       }
     }
+  } else if (!m.channel.permissionsFor(m.guild.me).has('SEND_MESSAGES')) {
+    console.log('Missing permissions.' + m.channel.permissionsFor(m.guild.me))
   }
 })
 
