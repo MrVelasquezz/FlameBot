@@ -38,26 +38,25 @@ class Queue {
     this.i = i
   }
 
-  findPos() {
-    return queue.findIndex(item => item.serverId === this.d.guildId)
+  element() {
+    return queue.find(item => item.serverId === this.d.guildId)
   }
 
   async edit() {
-    if (data) {
-      const id = this.findPos()
-      if (id !== -1) {
-        for (let a = 0; a <= this.i; a++) {
-          queue[id].queue.unshift(queue[id].queue[0])
+    if (this.d) {
+      const element = this.element()
+      if (element) {
+        for (let a = 0; a <= this.i-1; a++) {
+          element.queue.unshift(element.queue[0])
         }
-        this.d.channel.send('Track ' + queue[id].queue[0].name + ' will be repeated ' + i + ' times')
+        this.d.channel.send('Track ' + element.queue[0].name + ' will be repeated ' + this.i + ' times')
       }
     }
   }
 
   async create() {
-    if (this.d, this.t) {
+    const element = this.element()
       if (this.d, this.t) {
-        const id = this.findPos()
         let vid
         try {
           vid = await playDl.video_info(this.t)
@@ -68,8 +67,8 @@ class Queue {
           console.log(e)
           return
         }
-        if (id !== -1) {
-          queue[id].queue.push({
+        if (element) {
+          element.queue.push({
             track: this.t,
             name: vid.video_details.title,
             thumbnail: vid.video_details.thumbnails[0].url,
@@ -89,13 +88,12 @@ class Queue {
           audioDriver(this.d.member.voice.channel, this.d)
         }
       }
-    }
   }
 
   async destroy() {
     if (this.d) {
-      const id = this.findPos()
-      if (id !== -1) {
+      const id = queue.findIndex(item => item.srverId === this.d.guildId)
+      if (id) {
         queue.splice(id, 1)
       }
     }
@@ -166,6 +164,9 @@ async function audioDriver(item, mess) {
         player.stop()
       })
     }
+  }
+  else{
+    console.log('Not enough permissions')
   }
 }
 
@@ -273,22 +274,32 @@ client.once('ready', () => {
 })
 
 client.on('interactionCreate', async m => {
+
   if (m.isButton()) {
+
     try {
+
       if (m.member.voice.channel) {
+
         if (playDl.yt_validate(m.customId) === 'video' || playDl.yt_validate(m.customId) === 'playlist') {
           m.message.delete()
           const c = new Queue(m, m.customId)
           c.create()
-        } else {
+        } 
+        
+        else {
+          
           try {
             const data = JSON.parse(m.customId)
             m.update(await finderMessage(m, await responcer(data.data), data.index, data.data))
-          } catch (e) {
+          } 
+          catch (e) {
             console.log(e)
           }
         }
-      } else {
+      } 
+      
+      else {
         //m.deferReply() //откладывает ответ и выводит сообщение FlameBot is thinking...
         setTimeout(() => {
           m.update({
@@ -297,7 +308,9 @@ client.on('interactionCreate', async m => {
           })
         }, 1000) // изменяет ответ, что выше
       }
-    } catch (e) {
+    } 
+    
+    catch (e) {
       console.error(e)
     }
 
@@ -306,125 +319,186 @@ client.on('interactionCreate', async m => {
 
 client.on('messageCreate', async m => {
   let mess = m.content.trim()
+  
   if (mess.length > 1 && mess.startsWith(m_key) && m.channel.permissionsFor(m.guild.me).has('SEND_MESSAGES')) {
     const s = mess.indexOf(' ')
     mess = mess.slice(1, mess.length)
     const command = function () {
+      
       if (s === -1) {
         return mess.trim().toLowerCase()
-      } else {
+      } 
+      
+      else {
         return mess.slice(0, s).trim().toLowerCase()
       }
     }
     const content = mess.slice(s, mess.length).trim()
+
+    //start of command logic
+
     if (command() === 'play' && content.length > 0) {
+      
       if (m.member.voice.channel) {
+        
         try {
+          
           if (playDl.yt_validate(content) === 'video' || playDl.yt_validate(content) === 'playlist') {
             m.delete()
             const c = new Queue(m, content)
             c.create()
-          } else if (playDl.yt_validate(content) === 'search') {
+          } 
+          
+          else if (playDl.yt_validate(content) === 'search') {
             m.reply(await finderMessage(m, await responcer(content), 0, content))
           }
-        } catch (e) {
+
+        } 
+        
+        catch (e) {
           console.error(e)
         }
-      } else {
+
+      } 
+      
+      else {
         m.reply({
           embeds: [vce]
         })
       }
-    } else if (command() === 'stop') {
+    } 
+    
+    else if (command() === 'stop') {
       dsv.getVoiceConnection(m.guildId).disconnect()
       m.channel.send({
         embeds: [ps]
       })
-    } else if (command() === 'pause') {
+    } 
+    
+    else if (command() === 'pause') {
       emitter.emit('pause')
       m.channel.send({
         embeds: [pp(m)]
       })
-    } else if (command() === 'unpause') {
+    } 
+    
+    else if (command() === 'unpause') {
       emitter.emit('unpause')
       m.channel.send({
         embeds: [up(m)]
       })
-    } else if (command() === 'playing') {
+    } 
+    
+    else if (command() === 'playing') {
       const now = queue.find(item => item.serverId === m.guildId)
+      
       if (typeof now !== 'undefined') {
         m.channel.send({
           embeds: [playingMsg(m)]
         })
-      } else {
+      } 
+      
+      else {
         m.channel.send({
           embeds: [playingMsgE]
         })
       }
-    } else if (command() === 'queue') {
+    } 
+    
+    else if (command() === 'queue') {
       const servQueue = queue.find(item => item.serverId === m.guildId)
-      if (typeof servQueue !== 'undefined' && servQueue.queue.length > 1) {
+      
+      if (typeof servQueue !== 'undefined' && servQueue.queue.length > 0) {
         m.channel.send({
           embeds: [queueMsg(m)]
         })
-      } else {
+      } 
+      
+      else {
         m.channel.send({
           embeds: [queueMsgE]
         })
       }
-    } else if (command() === 'help') {
+    } 
+    
+    else if (command() === 'help') {
       m.channel.send({
         embeds: [helpMsg]
       })
-    } else if (command() === 'skip') {
+    } 
+    
+    else if (command() === 'skip') {
       const n = queue.find(item => item.serverId === m.guildId)
+      
       if (n) {
         m.channel.send({
           embeds: [skipMsg(n.queue[0].name)]
         })
         emitter.emit('skip')
-      } else {
+      } 
+      
+      else {
         m.channel.send({
           embeds: [skipMsgE]
         })
       }
-    } else if (command() === 'again') {
+    } 
+    
+    else if (command() === 'again') {
       if (!content) {
         const e = new Queue(m, null, 1)
         e.edit()
-      } else {
+      } 
+      
+      else {
         const count = parseInt(content)
+        
+        
         if (typeof count === 'number' && !isNaN(count)) {
           const e = new Queue(m, null, count)
           e.edit()
         }
+
       }
     }
-  } else if (!m.channel.permissionsFor(m.guild.me).has('SEND_MESSAGES')) {
+
+    //end of command logic
+
+  } 
+  
+  else if (!m.channel.permissionsFor(m.guild.me).has('SEND_MESSAGES')) {
     console.log('Missing permissions.' + m.channel.permissionsFor(m.guild.me))
   }
+
 })
 
 client.on('voiceStateUpdate', (oldState, newState) => {
+  
   if (oldState.channel !== null) {
+    
     if (oldState.channel.members.size === 1 && oldState.channel.members.has('939294433852145725')) {
+      console.log(oldState.guild.id)
       dsv.getVoiceConnection(oldState.guild.id).disconnect()
       const d = new Queue(oldState.channel)
       d.destroy()
     }
+    
     if (!oldState.channel.members.has('939294433852145725')) {
       const d = new Queue(oldState.channel)
       d.destroy()
     }
+
   }
 })
 
 client.on('guildCreate', g => {
+  
   if (g.systemChannel.permissionsFor(g.me).has('SEND_MESSAGES')) {
     g.systemChannel.send({
       embeds: [hiMsg]
     })
   }
+  
 })
 
 client.login(process.env.TOKEN)

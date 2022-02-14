@@ -59,14 +59,13 @@ const skipMsgE = new ds.MessageEmbed()
     })
 
 const queueMsg = (m) => {
-    const q = find()
-    q.queue.splice(0, 1)
+    const q = find(m)
     const text = () => {
         let text = '',
             i = 0
         q.queue.forEach(item => {
+            text += `**${i == 0 ? 'Now:' : i + '.'}** ${item.name} ${item.duration} \n\n`
             i++
-            text += `**${i}.** ${item.name} ${item.duration} \n\n`
         });
         return text
     }
