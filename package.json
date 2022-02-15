@@ -16,6 +16,7 @@
     "ffmpeg": "^0.0.4",
     "ffmpeg-static": "^4.4.1",
     "libsodium": "^0.7.9",
+    "mongoose": "^6.2.1",
     "nodemon": "^2.0.15",
     "opusscript": "^0.0.8",
     "play-dl": "^1.8.6",
